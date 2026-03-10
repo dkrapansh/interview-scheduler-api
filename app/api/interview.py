@@ -46,3 +46,33 @@ def get_my_interviews(
 ):
     interviews = db.query(Interview).filter(Interview.candidate_id == current_user.id).all()
     return interviews
+
+
+@router.patch("/{interview_id}/cancel", response_model=InterviewResponse)
+def cancel_interview(
+    interview_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_candidate)
+):
+    interview = db.query(Interview).filter(Interview.id == interview_id).first()
+
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+
+    if interview.candidate_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only cancel your own interview")
+
+    if interview.status == "cancelled":
+        raise HTTPException(status_code=400, detail="Interview is already cancelled")
+
+    slot = db.query(Slot).filter(Slot.id == interview.slot_id).first()
+
+    interview.status = "cancelled"
+
+    if slot:
+        slot.is_booked = False
+
+    db.commit()
+    db.refresh(interview)
+
+    return interview
