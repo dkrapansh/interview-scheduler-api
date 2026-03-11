@@ -17,27 +17,39 @@ def book_interview(
     current_user = Depends(require_candidate)
 ):
     slot = db.query(Slot).filter(Slot.id == interview_data.slot_id).first()
-
     if not slot:
         raise HTTPException(status_code=404, detail="Slot not found")
 
-    if slot.is_booked:
-        raise HTTPException(status_code=400, detail="Slot is already booked")
+    # Check if slot is already booked and active
+    existing_interview = (
+        db.query(Interview)
+        .filter(Interview.slot_id == slot.id)
+        .first()
+    )
 
+    if existing_interview:
+        if existing_interview.status == "scheduled":
+            raise HTTPException(status_code=400, detail="Slot is already booked")
+        elif existing_interview.status == "cancelled":
+            # Reuse cancelled interview
+            existing_interview.candidate_id = current_user.id
+            existing_interview.status = "scheduled"
+            slot.is_booked = True
+            db.commit()
+            db.refresh(existing_interview)
+            return existing_interview
+
+    # If slot was never booked
     new_interview = Interview(
         slot_id=slot.id,
         candidate_id=current_user.id,
         status="scheduled"
     )
-
     slot.is_booked = True
-
     db.add(new_interview)
     db.commit()
     db.refresh(new_interview)
-
     return new_interview
-
 
 @router.get("/me", response_model=list[InterviewResponse])
 def get_my_interviews(
