@@ -1,5 +1,7 @@
 from sqlalchemy import Column, Integer, DateTime, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from app.db.base import Base
+
 
 class Slot(Base):
     __tablename__ = "slots"
@@ -9,3 +11,5 @@ class Slot(Base):
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
     is_booked = Column(Boolean, default=False)
+
+    interviews = relationship("Interview", back_populates="slot")
