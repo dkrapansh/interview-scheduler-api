@@ -26,3 +26,11 @@ app.include_router(interview_router)
 @app.get("/")
 def root():
     return {"message": "Interview Scheduler API is running"}
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # tighten this after testing
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
