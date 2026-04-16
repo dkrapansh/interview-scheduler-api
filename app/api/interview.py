@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import joinedload
 from app.api.deps import require_candidate, get_current_user
 from app.db.session import get_db
 from app.models.interview import Interview
@@ -56,9 +56,24 @@ def get_my_interviews(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    interviews = db.query(Interview).filter(Interview.candidate_id == current_user.id).all()
-    return interviews
+    interviews = (
+        db.query(Interview)
+        .options(joinedload(Interview.slot))  
+        .filter(Interview.candidate_id == current_user.id)
+        .all()
+    )
 
+    return [
+        {
+            "id": iv.id,
+            "slot_id": iv.slot_id,
+            "candidate_id": iv.candidate_id,   # ✅ ADD THIS
+            "status": iv.status,
+            "start_time": iv.slot.start_time,
+            "end_time": iv.slot.end_time
+        }
+        for iv in interviews
+    ]
 
 @router.patch("/{interview_id}/cancel", response_model=InterviewResponse)
 def cancel_interview(
