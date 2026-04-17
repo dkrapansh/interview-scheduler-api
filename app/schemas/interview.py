@@ -12,5 +12,7 @@ class InterviewResponse(BaseModel):
     status: str
     start_time: datetime
     end_time: datetime
+    job_title: str
+    
     class Config:
         from_attributes = True
