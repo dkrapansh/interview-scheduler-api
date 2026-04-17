@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.orm import joinedload
 from app.api.deps import require_candidate, get_current_user
 from app.db.session import get_db
 from app.models.interview import Interview
@@ -37,7 +36,15 @@ def book_interview(
             slot.is_booked = True
             db.commit()
             db.refresh(existing_interview)
-            return existing_interview
+            return {
+                "id": existing_interview.id,
+                "slot_id": existing_interview.slot_id,
+                "candidate_id": existing_interview.candidate_id,
+                "status": existing_interview.status,
+                "start_time": slot.start_time,
+                "end_time": slot.end_time,
+                "job_title": slot.job.title
+            }
 
     # If slot was never booked
     new_interview = Interview(
@@ -49,7 +56,15 @@ def book_interview(
     db.add(new_interview)
     db.commit()
     db.refresh(new_interview)
-    return new_interview
+    return {
+    "id": new_interview.id,
+    "slot_id": new_interview.slot_id,
+    "candidate_id": new_interview.candidate_id,
+    "status": new_interview.status,
+    "start_time": slot.start_time,
+    "end_time": slot.end_time,
+    "job_title": slot.job.title
+}
 
 @router.get("/me", response_model=list[InterviewResponse])
 def get_my_interviews(
@@ -58,7 +73,7 @@ def get_my_interviews(
 ):
     interviews = (
         db.query(Interview)
-        .options(joinedload(Interview.slot))  
+        .options(joinedload(Interview.slot).joinedload(Slot.job))  
         .filter(Interview.candidate_id == current_user.id)
         .all()
     )
@@ -67,10 +82,11 @@ def get_my_interviews(
         {
             "id": iv.id,
             "slot_id": iv.slot_id,
-            "candidate_id": iv.candidate_id,   # ✅ ADD THIS
+            "candidate_id": iv.candidate_id,
             "status": iv.status,
             "start_time": iv.slot.start_time,
-            "end_time": iv.slot.end_time
+            "end_time": iv.slot.end_time,
+            "job_title": iv.slot.job.title
         }
         for iv in interviews
     ]
@@ -102,4 +118,12 @@ def cancel_interview(
     db.commit()
     db.refresh(interview)
 
-    return interview
+    return {
+    "id": interview.id,
+    "slot_id": interview.slot_id,
+    "candidate_id": interview.candidate_id,
+    "status": interview.status,
+    "start_time": slot.start_time if slot else None,
+    "end_time": slot.end_time if slot else None,
+    "job_title": slot.job.title if slot else None
+}
