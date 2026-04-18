@@ -9,6 +9,7 @@ class InterviewResponse(BaseModel):
     id: int
     slot_id: int
     candidate_id: int
+    candidate_email:str
     status: str
     start_time: datetime
     end_time: datetime

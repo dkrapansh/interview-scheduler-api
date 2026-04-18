@@ -71,18 +71,35 @@ def get_my_interviews(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    interviews = (
-        db.query(Interview)
-        .options(joinedload(Interview.slot).joinedload(Slot.job))  
-        .filter(Interview.candidate_id == current_user.id)
-        .all()
-    )
+    if current_user.role == "candidate":
+        interviews = (
+            db.query(Interview)
+            .options(
+                joinedload(Interview.slot).joinedload(Slot.job),
+                joinedload(Interview.candidate)
+                     )
+            .filter(Interview.candidate_id == current_user.id)
+            .all()
+        )
+
+    else:  # recruiter
+        interviews = (
+            db.query(Interview)
+            .join(Slot, Interview.slot_id == Slot.id)
+            .options(
+                joinedload(Interview.slot).joinedload(Slot.job),
+                joinedload(Interview.candidate)
+                )
+            .filter(Slot.recruiter_id == current_user.id)
+            .all()
+        )
 
     return [
         {
             "id": iv.id,
             "slot_id": iv.slot_id,
             "candidate_id": iv.candidate_id,
+            "candidate_email": iv.candidate.email,
             "status": iv.status,
             "start_time": iv.slot.start_time,
             "end_time": iv.slot.end_time,
