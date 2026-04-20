@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
 
 from app.api.deps import require_recruiter, get_current_user
 from app.db.session import get_db
 from app.models.slot import Slot
 from app.schemas.slot import SlotCreate, SlotResponse, SlotPublic
 from app.models.job import Job
+from app.models.interview import Interview
 
 router = APIRouter(prefix="/slots", tags=["Slots"])
 
@@ -34,7 +36,6 @@ def create_slot(
         recruiter_id=current_user.id,
         start_time=slot.start_time,
         end_time=slot.end_time,
-        is_booked=False,
         job_id=slot.job_id
     )
 
@@ -52,8 +53,13 @@ def get_all_open_slots(
 ):
     slots = (
         db.query(Slot)
+        .outerjoin(Interview)
+        .filter(
+            or_(Interview.id == None,
+                Interview.status == "cancelled"
+            )
+        )
         .options(joinedload(Slot.job))
-        .filter(Slot.is_booked == False)
         .all()
     )
     return [

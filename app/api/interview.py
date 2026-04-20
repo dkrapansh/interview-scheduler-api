@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.exc import IntegrityError
 from app.api.deps import require_candidate, get_current_user
 from app.db.session import get_db
 from app.models.interview import Interview
@@ -19,52 +20,33 @@ def book_interview(
     if not slot:
         raise HTTPException(status_code=404, detail="Slot not found")
 
-    # Check if slot is already booked and active
-    existing_interview = (
-        db.query(Interview)
-        .filter(Interview.slot_id == slot.id)
-        .first()
-    )
+    # REMOVED old existing_interview logic completely
 
-    if existing_interview:
-        if existing_interview.status == "scheduled":
-            raise HTTPException(status_code=400, detail="Slot is already booked")
-        elif existing_interview.status == "cancelled":
-            # Reuse cancelled interview
-            existing_interview.candidate_id = current_user.id
-            existing_interview.status = "scheduled"
-            slot.is_booked = True
-            db.commit()
-            db.refresh(existing_interview)
-            return {
-                "id": existing_interview.id,
-                "slot_id": existing_interview.slot_id,
-                "candidate_id": existing_interview.candidate_id,
-                "status": existing_interview.status,
-                "start_time": slot.start_time,
-                "end_time": slot.end_time,
-                "job_title": slot.job.title
-            }
-
-    # If slot was never booked
     new_interview = Interview(
         slot_id=slot.id,
         candidate_id=current_user.id,
         status="scheduled"
     )
-    slot.is_booked = True
+
     db.add(new_interview)
-    db.commit()
-    db.refresh(new_interview)
+
+    try:
+        db.commit()
+        db.refresh(new_interview)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Slot already booked")
+
     return {
-    "id": new_interview.id,
-    "slot_id": new_interview.slot_id,
-    "candidate_id": new_interview.candidate_id,
-    "status": new_interview.status,
-    "start_time": slot.start_time,
-    "end_time": slot.end_time,
-    "job_title": slot.job.title
-}
+        "id": new_interview.id,
+        "slot_id": new_interview.slot_id,
+        "candidate_id": new_interview.candidate_id,
+        "candidate_email": current_user.email,
+        "status": new_interview.status,
+        "start_time": slot.start_time,
+        "end_time": slot.end_time,
+        "job_title": slot.job.title
+    }
 
 @router.get("/me", response_model=list[InterviewResponse])
 def get_my_interviews(
@@ -112,35 +94,77 @@ def get_my_interviews(
 def cancel_interview(
     interview_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(require_candidate)
+    current_user = Depends(get_current_user)
 ):
-    interview = db.query(Interview).filter(Interview.id == interview_id).first()
-
+    interview = (
+        db.query(Interview)
+        .options(joinedload(Interview.slot))
+        .filter(Interview.id == interview_id)
+        .first()
+    )
     if not interview:
         raise HTTPException(status_code=404, detail="Interview not found")
 
-    if interview.candidate_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You can only cancel your own interview")
+    #  allow candidate
+    if interview.candidate_id == current_user.id:
+        pass
+    
+    # allow recruiter
+    elif interview.slot.recruiter_id == current_user.id:
+        pass
+
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     if interview.status == "cancelled":
-        raise HTTPException(status_code=400, detail="Interview is already cancelled")
-
-    slot = db.query(Slot).filter(Slot.id == interview.slot_id).first()
+        raise HTTPException(status_code=400, detail="Already cancelled")
 
     interview.status = "cancelled"
-
-    if slot:
-        slot.is_booked = False
 
     db.commit()
     db.refresh(interview)
 
     return {
-    "id": interview.id,
-    "slot_id": interview.slot_id,
-    "candidate_id": interview.candidate_id,
-    "status": interview.status,
-    "start_time": slot.start_time if slot else None,
-    "end_time": slot.end_time if slot else None,
-    "job_title": slot.job.title if slot else None
-}
+        "id": interview.id,
+        "slot_id": interview.slot_id,
+        "candidate_id": interview.candidate_id,
+        "candidate_email": interview.candidate.email,
+        "status": interview.status,
+        "start_time": interview.slot.start_time,
+        "end_time": interview.slot.end_time,
+        "job_title": interview.slot.job.title
+    }
+
+@router.get("/summary")
+def get_interview_summary(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    from datetime import datetime, date
+
+    today = date.today()
+
+    if current_user.role == "recruiter":
+        interviews = (
+            db.query(Interview)
+            .join(Slot)
+            .filter(Slot.recruiter_id == current_user.id)
+            .all()
+        )
+    else:
+        interviews = (
+            db.query(Interview)
+            .filter(Interview.candidate_id == current_user.id)
+            .all()
+        )
+    
+    today_interviews = [
+        iv for iv in interviews
+        if iv.slot.start_time.date() == today
+    ]
+
+    return {
+        "total_today": len(today_interviews),
+        "scheduled": len([iv for iv in today_interviews if iv.status == "scheduled"]),
+        "cancelled": len([iv for iv in today_interviews if iv.status == "cancelled"])
+    }

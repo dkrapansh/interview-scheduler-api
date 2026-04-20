@@ -10,9 +10,7 @@ class Slot(Base):
     recruiter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
-    is_booked = Column(Boolean, default=False)
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
     
     job=relationship("Job", back_populates="slots")
-
     interviews = relationship("Interview", back_populates="slot")

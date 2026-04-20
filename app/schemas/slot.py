@@ -11,7 +11,6 @@ class SlotResponse(BaseModel):
     recruiter_id: int
     start_time: datetime
     end_time: datetime
-    is_booked: bool
 
     class Config:
         from_attributes = True
