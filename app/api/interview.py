@@ -6,6 +6,7 @@ from app.db.session import get_db
 from app.models.interview import Interview
 from app.models.slot import Slot
 from app.schemas.interview import InterviewCreate, InterviewResponse
+from app.services.interview_service import book_interview_service
 
 router = APIRouter(prefix="/interviews", tags=["Interviews"])
 
@@ -16,33 +17,18 @@ def book_interview(
     db: Session = Depends(get_db),
     current_user = Depends(require_candidate)
 ):
-    slot = db.query(Slot).filter(Slot.id == interview_data.slot_id).first()
-    if not slot:
-        raise HTTPException(status_code=404, detail="Slot not found")
-
-    # REMOVED old existing_interview logic completely
-
-    new_interview = Interview(
-        slot_id=slot.id,
-        candidate_id=current_user.id,
-        status="scheduled"
+    interview, slot = book_interview_service(
+        db,
+        interview_data.slot_id,
+        current_user
     )
 
-    db.add(new_interview)
-
-    try:
-        db.commit()
-        db.refresh(new_interview)
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=400, detail="Slot already booked")
-
     return {
-        "id": new_interview.id,
-        "slot_id": new_interview.slot_id,
-        "candidate_id": new_interview.candidate_id,
+        "id": interview.id,
+        "slot_id": interview.slot_id,
+        "candidate_id": interview.candidate_id,
         "candidate_email": current_user.email,
-        "status": new_interview.status,
+        "status": interview.status,
         "start_time": slot.start_time,
         "end_time": slot.end_time,
         "job_title": slot.job.title
