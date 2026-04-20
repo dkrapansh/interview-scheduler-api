@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 
 from app.api.deps import require_recruiter, get_current_user
 from app.db.session import get_db
@@ -30,6 +30,24 @@ def create_slot(
         raise HTTPException(
             status_code = 400,
             detail="Invalid job or not authorized"
+        )
+
+    overlap = (
+        db.query(Slot)
+        .filter(
+            Slot.recruiter_id == current_user.id,
+            and_(
+                Slot.start_time < slot.end_time,
+                Slot.end_time > slot.start_time
+            )
+        )
+        .first()
+    )
+
+    if overlap:
+        raise HTTPException(
+            status_code=400, 
+            detail="Slot overlaps with an existing slot"
         )
 
     new_slot = Slot(
