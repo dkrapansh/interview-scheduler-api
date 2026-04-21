@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_
 
@@ -67,7 +67,9 @@ def create_slot(
 @router.get("/", response_model=list[SlotPublic])
 def get_all_open_slots(
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    limit: int = Query(10, le=50),
+    offset: int = Query(0)
 ):
     slots = (
         db.query(Slot)
@@ -78,6 +80,8 @@ def get_all_open_slots(
             )
         )
         .options(joinedload(Slot.job))
+        .limit(limit)
+        .offset(offset)
         .all()
     )
     return [
