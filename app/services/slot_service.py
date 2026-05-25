@@ -59,19 +59,20 @@ def create_slot_service(
     return new_slot
 
 def get_open_slots_service(
-        db: Session,
-        limit: int,
-        offset: int,
-        job_id: Optional[int],
-        date: Optional[str]
-) -> list[Slot]:
-    logger.info(f"Fetching open slots | job_id = {job_id} | date = {date}")
+    db: Session,
+    limit: int,
+    offset: int,
+    job_id: Optional[int],
+    date: Optional[str]
+) -> dict:
+    logger.info(f"Fetching open slots | job_id={job_id} | date={date}")
 
     query = (
         db.query(Slot)
         .outerjoin(Interview)
         .filter(
-            or_(Interview.id == None,
+            or_(
+                Interview.id == None,
                 Interview.status == "cancelled"
             )
         )
@@ -80,7 +81,7 @@ def get_open_slots_service(
 
     if job_id:
         query = query.filter(Slot.job_id == job_id)
-    
+
     if date:
         try:
             target_date = datetime.fromisoformat(date).date()
@@ -90,6 +91,16 @@ def get_open_slots_service(
                 Slot.start_time < next_day
             )
         except Exception:
-            raise HTTPException(status_code=400, detail="Invalid date format.")
-    
-    return query.limit(limit).offset(offset).all()
+            raise HTTPException(status_code=400, detail="Invalid date format")
+
+    total = query.count()
+    slots = query.limit(limit).offset(offset).all()
+
+    page = (offset // limit) + 1
+
+    return {
+        "items": slots,
+        "total": total,
+        "page": page,
+        "size": limit
+    }

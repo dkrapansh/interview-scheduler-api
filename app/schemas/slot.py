@@ -1,5 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel
+from typing import List
 
 class SlotCreate(BaseModel):
     start_time: datetime
@@ -23,3 +24,9 @@ class SlotPublic(BaseModel):
 
     class Config:
         from_attributes = True
+
+class PaginatedSlotResponse(BaseModel):
+    items: List[SlotPublic]
+    total: int
+    page: int
+    size: int
