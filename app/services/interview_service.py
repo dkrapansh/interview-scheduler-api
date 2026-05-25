@@ -12,7 +12,7 @@ def book_interview_service(db: Session, slot_id: int, user):
     
     logger.info(f"User {user.id} attempting to book slot {slot_id}")
 
-    slot = db.query(Slot).filter(Slot.id == slot_id).first()
+    slot = db.query(Slot).filter(Slot.id == slot_id).with_for_update().first()
     if not slot:
         raise HTTPException(status_code=404, detail="Slot not found")
     
