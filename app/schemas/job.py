@@ -10,4 +10,4 @@ class JobResponse(BaseModel):
     recruiter_id: int
 
     class Config:
-        from_attribures = True
+        from_attributes = True
