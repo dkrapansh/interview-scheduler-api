@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import engine
@@ -17,6 +18,13 @@ app = FastAPI(
     version=settings.PROJECT_VERSION
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # tighten this after testing
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(user_router)
 app.include_router(auth_router)
 app.include_router(me_router)
@@ -28,11 +36,4 @@ app.include_router(job_router)
 @app.get("/")
 def root():
     return {"message": "Interview Scheduler API is running"}
-from fastapi.middleware.cors import CORSMiddleware
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # tighten this after testing
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
