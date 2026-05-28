@@ -9,7 +9,7 @@ def test_recruiter_can_create_slot(client):
     job = create_job(client, headers)
     job_id = job.json()["id"]
     res = create_slot(client, headers, job_id, FUTURE_START, FUTURE_END)
-    assert res.status_code == 200
+    assert res.status_code == 201
     assert res.json()["id"] is not None
 
 def test_candidate_cannot_create_slot(client):

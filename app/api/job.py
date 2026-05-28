@@ -9,7 +9,7 @@ from app.services.job_service import create_job_service, get_my_jobs_service
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
 
-@router.post("/", response_model=JobResponse)
+@router.post("/", response_model=JobResponse, status_code=201)
 def create_job(
     job: JobCreate,
     db: Session = Depends(get_db),

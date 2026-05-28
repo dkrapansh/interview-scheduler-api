@@ -11,7 +11,7 @@ from app.core.logging_config import logger
 router = APIRouter(prefix="/slots", tags=["Slots"])
 
 
-@router.post("/", response_model=SlotResponse)
+@router.post("/", response_model=SlotResponse, status_code=201)
 def create_slot(
     slot: SlotCreate,
     db: Session = Depends(get_db),

@@ -23,7 +23,7 @@ def _setup_booked_interview(client):
 
 def test_candidate_can_book_slot(client):
     res, _, _, _ = _setup_booked_interview(client)
-    assert res.status_code == 200
+    assert res.status_code == 201
     assert res.json()["status"] == "scheduled"
 
 

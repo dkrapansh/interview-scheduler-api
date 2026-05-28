@@ -1,7 +1,7 @@
 from tests.conftest import register_user, login
 def test_register_success(client):
     res = register_user(client, "Alice", "alice@test.com", "pass123", "candidate")
-    assert res.status_code == 200
+    assert res.status_code == 201
     assert res.json()["email"] == "alice@test.com"
 
 def test_register_duplicate_email(client):

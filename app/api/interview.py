@@ -13,7 +13,7 @@ from app.core.logging_config import logger
 
 router = APIRouter(prefix="/interviews", tags=["Interviews"])
 
-@router.post("/book", response_model=InterviewResponse)
+@router.post("/book", response_model=InterviewResponse, status_code=201)
 def book_interview(
     interview_data: InterviewCreate,
     db: Session = Depends(get_db),
