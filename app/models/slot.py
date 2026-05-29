@@ -7,7 +7,7 @@ class Slot(Base):
     __tablename__ = "slots"
 
     id = Column(Integer, primary_key=True, index=True)
-    recruiter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    recruiter_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
