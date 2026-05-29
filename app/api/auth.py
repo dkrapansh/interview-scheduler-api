@@ -1,16 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import LoginRequest, TokenResponse
 from app.core.security import verify_password, create_access_token
+from app.core.limiter import limiter
+import os
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/login", response_model=TokenResponse)
-def login_user(user_data: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("1000/minute" if os.getenv("TESTING") == "true" else "5/minute")
+def login_user(request: Request, user_data: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == user_data.email).first()
 
     if not user:

@@ -2,6 +2,7 @@ import os
 
 os.environ["DATABASE_URL"] = "sqlite:///./test_interview.db"
 os.environ["SECRET_KEY"] = "test-secret-key-do-not-use-in-production"
+os.environ["TESTING"] = "true"
 
 import pytest
 from fastapi.testclient import TestClient
