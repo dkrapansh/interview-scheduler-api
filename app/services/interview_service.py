@@ -7,6 +7,9 @@ from app.models.slot import Slot
 
 from app.core.logging_config import logger
 
+from datetime import date
+from sqlalchemy import func
+
 def book_interview_service(db: Session, slot_id: int, user):
     logger.info(f"Unser {user.id} attempting to book slot {slot_id}")
 
@@ -110,3 +113,35 @@ def cancel_interview_service(db: Session, interview_id: int, user) -> Interview:
 
     logger.info(f"Interview {interview_id} cancelled by user {user.id}")
     return interview
+
+def get_interview_summary_service(db: Session, user) -> dict:
+    logger.info(f"Fetching summary for user {user.id}")
+
+    if user.role == "recruiter":
+        query = (
+            db.query(Interview)
+            .join(Slot, Interview.slot_id == Slot.id)
+            .filter(
+                Slot.recruiter_id == user.id,
+                func.date(Slot.start_time) == date.today()
+            )
+        )
+    else:
+        query = (
+            db.query(Interview)
+            .join(Slot, Interview.slot_id == Slot.id)
+            .filter(
+                Interview.candidate_id == user.id,
+                func.date(Slot.start_time) == date.today()
+            )
+        )
+    interviews = query.all()
+
+    summary = {
+        "total_today": len(interviews),
+        "scheduled": len([iv for iv in interviews if iv.status == "scheculed"]),
+        "cancelled": len([iv for iv in interviews if iv.status == "cancelled"])
+    }
+
+    logger.info(f"Summary for user {user.id}: {summary}")
+    return summary

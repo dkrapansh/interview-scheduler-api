@@ -7,7 +7,8 @@ from app.schemas.interview import InterviewCreate, InterviewResponse
 from app.services.interview_service import (
     book_interview_service,
     get_my_interviews_service,
-    cancel_interview_service
+    cancel_interview_service,
+    get_interview_summary_service
 )
 from app.core.logging_config import logger
 
@@ -78,22 +79,4 @@ def get_interview_summary(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    from datetime import date
-    today = date.today()
-
-    interviews = get_my_interviews_service(db, current_user)
-
-    today_interviews = [
-        iv for iv in interviews
-        if iv.slot.start_time.date() == today
-    ]
-
-    summary = {
-        "total_today": len(today_interviews),
-        "scheduled": len([iv for iv in today_interviews if iv.status == "scheduled"]),
-        "cancelled": len([iv for iv in today_interviews if iv.status == "cancelled"])
-    }
-
-    logger.info(f"Summary for user {current_user.id}: {summary}")
-
-    return summary
+    return get_interview_summary_service(db, current_user)
