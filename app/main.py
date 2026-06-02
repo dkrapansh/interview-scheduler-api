@@ -16,6 +16,7 @@ from app.api.interview import router as interview_router
 from app.api.job import router as job_router
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from app.core.middleware import CorrelationIDMiddleware
 
 Base.metadata.create_all(bind=engine)
 
@@ -34,6 +35,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(CorrelationIDMiddleware)
 
 app.include_router(user_router)
 app.include_router(auth_router)
