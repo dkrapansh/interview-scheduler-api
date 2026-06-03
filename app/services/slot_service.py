@@ -9,6 +9,8 @@ from app.models.job import Job
 from app.models.interview import Interview
 from app.core.logging_config import logger
 
+from app.core.middleware import get_correlation_id
+
 def create_slot_service(
         db: Session,
         recruiter_id: int,
@@ -16,7 +18,7 @@ def create_slot_service(
         start_time: datetime, 
         end_time: datetime
 ) -> Slot: 
-    logger.info(f"Recruiter {recruiter_id} creating slot {start_time} - {end_time}")
+    logger.info(f"[{get_correlation_id()}] Recruiter {recruiter_id} creating slot {start_time} - {end_time}")
 
     if end_time <= start_time:
         raise HTTPException(status_code=400, detail="End time must be after start time")
@@ -55,7 +57,7 @@ def create_slot_service(
     db.commit()
     db.refresh(new_slot)
 
-    logger.info(f"Slot created with id {new_slot.id}")
+    logger.info(f"[{get_correlation_id()}] Slot created with id {new_slot.id}")
     return new_slot
 
 def get_open_slots_service(
@@ -65,7 +67,7 @@ def get_open_slots_service(
     job_id: Optional[int],
     date: Optional[str]
 ) -> dict:
-    logger.info(f"Fetching open slots | job_id={job_id} | date={date}")
+    logger.info(f"[{get_correlation_id()}] Fetching open slots | job_id={job_id} | date={date}")
 
     query = (
         db.query(Slot)

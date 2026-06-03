@@ -10,8 +10,10 @@ from app.core.logging_config import logger
 from datetime import date
 from sqlalchemy import func
 
+from app.core.middleware import get_correlation_id
+
 def book_interview_service(db: Session, slot_id: int, user):
-    logger.info(f"Unser {user.id} attempting to book slot {slot_id}")
+    logger.info(f"[{get_correlation_id()}] User {user.id} attempting to book slot {slot_id}")
 
     slot = (
         db.query(Slot)
@@ -27,7 +29,7 @@ def book_interview_service(db: Session, slot_id: int, user):
 
     if existing:
         if existing.status == "scheduled":
-            logger.warning(f"Slot {slot_id} is already booked.")
+            logger.warning(f"[{get_correlation_id()}] Slot {slot_id} is already booked.")
             raise HTTPException(status_code=400, detail="Slot already booked.")
         
         if existing.status.lower() == "cancelled":
@@ -36,7 +38,7 @@ def book_interview_service(db: Session, slot_id: int, user):
             db.commit()
             db.refresh(existing)
 
-            logger.info(f"Slot {slot_id} rebooked by user {user.id}")
+            logger.info(f"[{get_correlation_id()}] Slot {slot_id} rebooked by user {user.id}")
             return existing, slot
         
     new_interview = Interview(
@@ -51,17 +53,17 @@ def book_interview_service(db: Session, slot_id: int, user):
         db.commit()
         db.refresh(new_interview)
 
-        logger.info(f"Slot {slot_id} booked successsfully by user {user.id}")
+        logger.info(f"[{get_correlation_id()}] Slot {slot_id} booked successsfully by user {user.id}")
 
     except IntegrityError:
         db.rollback()
-        logger.warning(f"Slot {slot_id} already booked (race condition caught by DB constraint)")
+        logger.warning(f"[{get_correlation_id()}] Slot {slot_id} already booked (race condition caught by DB constraint)")
         raise HTTPException(status_code=400, detail="Slot already booked")
     
     return new_interview, slot
 
 def get_my_interviews_service(db: Session, user) -> list[Interview]:
-    logger.info(f"Fetching interviews for user {user.id} (role={user.role})")
+    logger.info(f"[{get_correlation_id()}] Fetching interviews for user {user.id} (role={user.role})")
 
     if user.role == "candidate":
         return (
@@ -86,7 +88,7 @@ def get_my_interviews_service(db: Session, user) -> list[Interview]:
         )   
 
 def cancel_interview_service(db: Session, interview_id: int, user) -> Interview:
-    logger.info(f"User {user.id} attempting to cancel interview {interview_id}")
+    logger.info(f"[{get_correlation_id()}] User {user.id} attempting to cancel interview {interview_id}")
 
     interview = (
         db.query(Interview)
@@ -96,26 +98,26 @@ def cancel_interview_service(db: Session, interview_id: int, user) -> Interview:
     )
 
     if not interview:
-        logger.warning(f"Cancel failed: interview {interview_id} not found")
+        logger.warning(f"[{get_correlation_id()}] Cancel failed: interview {interview_id} not found")
         raise HTTPException(status_code=404, detail="Interview not found")
 
     if interview.candidate_id != user.id and interview.slot.recruiter_id != user.id:
-        logger.warning(f"Unauthorized cancel attempt by user {user.id}")
+        logger.warning(f"[{get_correlation_id()}] Unauthorized cancel attempt by user {user.id}")
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if interview.status == "cancelled":
-        logger.warning(f"Interview {interview_id} already cancelled")
+        logger.warning(f"[{get_correlation_id()}] Interview {interview_id} already cancelled")
         raise HTTPException(status_code=400, detail="Already cancelled")
 
     interview.status = "cancelled"
     db.commit()
     db.refresh(interview)
 
-    logger.info(f"Interview {interview_id} cancelled by user {user.id}")
+    logger.info(f"[{get_correlation_id()}] Interview {interview_id} cancelled by user {user.id}")
     return interview
 
 def get_interview_summary_service(db: Session, user) -> dict:
-    logger.info(f"Fetching summary for user {user.id}")
+    logger.info(f"[{get_correlation_id()}] Fetching summary for user {user.id}")
 
     if user.role == "recruiter":
         query = (
@@ -139,9 +141,9 @@ def get_interview_summary_service(db: Session, user) -> dict:
 
     summary = {
         "total_today": len(interviews),
-        "scheduled": len([iv for iv in interviews if iv.status == "scheculed"]),
+        "scheduled": len([iv for iv in interviews if iv.status == "scheduled"]),
         "cancelled": len([iv for iv in interviews if iv.status == "cancelled"])
     }
 
-    logger.info(f"Summary for user {user.id}: {summary}")
+    logger.info(f"[{get_correlation_id()}] Summary for user {user.id}: {summary}")
     return summary
