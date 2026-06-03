@@ -7,7 +7,7 @@ def test_register_success(client):
 def test_register_duplicate_email(client):
     register_user(client, "Alice", "alice@test.com", "pass123", "candidate")
     res = register_user(client, "Alice2", "alice@test.com", "pass456", "candidate")
-    assert res.status_code == 400
+    assert res.status_code == 409
     assert "already registered" in res.json()["detail"]
 
 def test_login_success(client):

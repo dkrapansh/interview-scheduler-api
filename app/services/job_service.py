@@ -19,7 +19,7 @@ def create_job_service(db: Session, title: str, description: str, recruiter_id: 
     db.commit()
     db.refresh(new_job)
 
-    logger.info(f"[{get_correlation_id()}] Job created with id {new_job}")
+    logger.info(f"[{get_correlation_id()}] Job created with id {new_job.id}")
     return new_job
 
 def get_my_jobs_service(db: Session, recruiter_id: int) -> list[Job]:

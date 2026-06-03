@@ -8,29 +8,34 @@ from app.models.slot import Slot
 from app.models.job import Job
 from app.models.interview import Interview
 from app.core.logging_config import logger
-
 from app.core.middleware import get_correlation_id
+from app.core.exceptions import (
+    InvalidSlotTimeException,
+    NotFoundException,
+    SlotOverlapException
+)
+
 
 def create_slot_service(
         db: Session,
         recruiter_id: int,
         job_id: int,
-        start_time: datetime, 
+        start_time: datetime,
         end_time: datetime
-) -> Slot: 
+) -> Slot:
     logger.info(f"[{get_correlation_id()}] Recruiter {recruiter_id} creating slot {start_time} - {end_time}")
 
     if end_time <= start_time:
-        raise HTTPException(status_code=400, detail="End time must be after start time")
-    
+        raise InvalidSlotTimeException()
+
     job = db.query(Job).filter(
         Job.id == job_id,
         Job.recruiter_id == recruiter_id
     ).first()
 
     if not job:
-        raise HTTPException(status_code=400, detail="Invalid job or not authorized")
-    
+        raise NotFoundException("Invalid job or not authorized")
+
     overlap = (
         db.query(Slot)
         .filter(
@@ -40,17 +45,17 @@ def create_slot_service(
                 Slot.end_time > start_time
             )
         )
-        .first()   
+        .first()
     )
 
     if overlap:
-        raise HTTPException(status_code=400, detail="Slot overlaps with an existing slot.")
-    
+        raise SlotOverlapException()
+
     new_slot = Slot(
-        recruiter_id = recruiter_id,
-        start_time = start_time,
-        end_time = end_time,
-        job_id = job_id
+        recruiter_id=recruiter_id,
+        start_time=start_time,
+        end_time=end_time,
+        job_id=job_id
     )
 
     db.add(new_slot)
@@ -59,6 +64,7 @@ def create_slot_service(
 
     logger.info(f"[{get_correlation_id()}] Slot created with id {new_slot.id}")
     return new_slot
+
 
 def get_open_slots_service(
     db: Session,

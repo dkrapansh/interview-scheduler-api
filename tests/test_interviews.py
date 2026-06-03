@@ -34,7 +34,7 @@ def test_double_booking_rejected(client):
     register_user(client, "Can2", "can2@test.com", "pass123", "candidate")
     can2_headers = auth_headers(client, "can2@test.com", "pass123")
     res = client.post("/interviews/book", json={"slot_id": slot_id}, headers=can2_headers)
-    assert res.status_code == 400
+    assert res.status_code == 409
     assert "already booked" in res.json()["detail"].lower()
 
 

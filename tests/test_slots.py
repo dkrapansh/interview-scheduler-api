@@ -29,6 +29,6 @@ def test_overlapping_slot_rejected(client):
     job_id = job.json()["id"]
     create_slot(client, headers, job_id, FUTURE_START, FUTURE_END)
     res = create_slot(client, headers, job_id, FUTURE_START, FUTURE_END)
-    assert res.status_code == 400
+    assert res.status_code == 409
     assert "overlap" in res.json()["detail"].lower()
     
