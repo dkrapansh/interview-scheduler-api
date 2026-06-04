@@ -27,3 +27,7 @@ class InvalidSlotTimeException(HTTPException):
 class SlotOverlapException(HTTPException):
     def __init__(self, detail: str = "Slot overlaps with an existing slot"):
         super().__init__(status_code=409, detail=detail)
+
+class InvalidStatusTransitionException(HTTPException):
+    def __init__(self, detail: str = "Invalid status transition"):
+        super().__init__(status_code=400, detail=detail)

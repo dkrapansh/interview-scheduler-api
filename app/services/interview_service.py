@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 
-from app.models.interview import Interview
+from app.models.interview import Interview, InterviewStatus
 from app.models.slot import Slot
 
 from app.core.logging_config import logger
@@ -10,7 +10,8 @@ from app.core.exceptions import (
     NotFoundException,
     AlreadyBookedException,
     UnauthorizedException,
-    AlreadyCancelledException
+    AlreadyCancelledException,
+    InvalidStatusTransitionException
 )
 
 from datetime import date
@@ -39,7 +40,7 @@ def book_interview_service(db: Session, slot_id: int, user):
 
         if existing.status.lower() == "cancelled":
             existing.candidate_id = user.id
-            existing.status = "scheduled"
+            existing.status = InterviewStatus.SCHEDULED
             db.commit()
             db.refresh(existing)
 
@@ -49,7 +50,7 @@ def book_interview_service(db: Session, slot_id: int, user):
     new_interview = Interview(
         slot_id=slot_id,
         candidate_id=user.id,
-        status="scheduled"
+        status = InterviewStatus.SCHEDULED
     )
 
     db.add(new_interview)
@@ -112,11 +113,11 @@ def cancel_interview_service(db: Session, interview_id: int, user) -> Interview:
         logger.warning(f"[{get_correlation_id()}] Unauthorized cancel attempt by user {user.id}")
         raise UnauthorizedException()
 
-    if interview.status == "cancelled":
-        logger.warning(f"[{get_correlation_id()}] Interview {interview_id} already cancelled")
-        raise AlreadyCancelledException()
+    if not InterviewStatus.can_transition(interview.status, InterviewStatus.CANCELLED):
+        logger.warning(f"[{get_correlation_id()}] Invalid transition from {interview.status} to cancelled")
+        raise InvalidStatusTransitionException(f"Cannot cancel an interview with status: {interview.status}")
 
-    interview.status = "cancelled"
+    interview.status = InterviewStatus.CANCELLED
     db.commit()
     db.refresh(interview)
 
