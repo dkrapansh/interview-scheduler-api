@@ -100,7 +100,10 @@ def cancel_interview_service(db: Session, interview_id: int, user) -> Interview:
 
     interview = (
         db.query(Interview)
-        .options(joinedload(Interview.slot))
+        .options(
+            joinedload(Interview.slot).joinedload(Slot.job),
+            joinedload(Interview.candidate)
+            )
         .filter(Interview.id == interview_id)
         .first()
     )

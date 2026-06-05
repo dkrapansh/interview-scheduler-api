@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_candidate, get_current_user
@@ -10,6 +10,10 @@ from app.services.interview_service import (
     cancel_interview_service,
     get_interview_summary_service
 )
+from app.services.notification_service import(
+    send_booking_confirmation,
+    send_cancellation_notice
+)
 from app.core.logging_config import logger
 
 router = APIRouter(prefix="/interviews", tags=["Interviews"])
@@ -17,12 +21,20 @@ router = APIRouter(prefix="/interviews", tags=["Interviews"])
 @router.post("/book", response_model=InterviewResponse, status_code=201)
 def book_interview(
     interview_data: InterviewCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user = Depends(require_candidate)
 ):
     logger.info(f"User {current_user.id} requested booking for slot {interview_data.slot_id}")
 
     interview, slot = book_interview_service(db, interview_data.slot_id, current_user)
+    background_tasks.add_task(
+        send_booking_confirmation,
+        candidate_email=current_user.email, 
+        job_title=slot.job.title,
+        start_time=slot.start_time,
+        end_time=slot.end_time
+    )
     return {
         "id": interview.id,
         "slot_id": interview.slot_id,
@@ -58,11 +70,17 @@ def get_my_interviews(
 @router.patch("/{interview_id}/cancel", response_model=InterviewResponse)
 def cancel_interview(
     interview_id: int, 
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     interview = cancel_interview_service(db, interview_id, current_user)
-
+    background_tasks.add_task(
+        send_cancellation_notice,
+        candidate_email=interview.candidate.email, 
+        job_title=interview.slot.job.title,
+        start_time=interview.slot.start_time
+    )
     return {
         "id": interview.id,
         "slot_id": interview.slot_id,
