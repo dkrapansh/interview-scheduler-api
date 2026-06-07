@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: scheduler
+      POSTGRES_PASSWORD: scheduler
+      POSTGRES_DB: scheduler_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U scheduler -d scheduler_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://scheduler:scheduler@db:5432/scheduler_db
+      SECRET_KEY: local-dev-secret-key-change-in-production
+      ALLOWED_ORIGINS: "*"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
