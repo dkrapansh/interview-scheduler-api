@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List
 
 class SlotCreate(BaseModel):
@@ -8,22 +8,20 @@ class SlotCreate(BaseModel):
     job_id: int
 
 class SlotResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     recruiter_id: int
     start_time: datetime
     end_time: datetime
 
-    class Config:
-        from_attributes = True
-
 class SlotPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     start_time: datetime
     end_time: datetime
     job_title: str
-
-    class Config:
-        from_attributes = True
 
 class PaginatedSlotResponse(BaseModel):
     items: List[SlotPublic]
