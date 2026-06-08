@@ -29,6 +29,8 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+app.add_middleware(CorrelationIDMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins= settings.ALLOWED_ORIGINS,  # will tighten this to main URL 
@@ -36,7 +38,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(CorrelationIDMiddleware)
 
 app.include_router(user_router)
 app.include_router(auth_router)
