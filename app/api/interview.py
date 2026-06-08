@@ -49,7 +49,7 @@ def book_interview(
 @router.get("/me", response_model=InterviewResponse)
 def get_my_interviews(
     db: Session = Depends(get_db),
-    current_user = get_current_user
+    current_user = Depends(get_current_user)
 ):
     interviews = get_my_interviews_service(db, current_user)
 
