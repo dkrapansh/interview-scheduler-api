@@ -37,4 +37,17 @@ def get_all_open_slots(
 ):
     result = get_open_slots_service(db, limit, offset, job_id, date)
     logger.info(f"Returned {result['total']} total slots for user {current_user.id}")
-    return result
+    return {
+        "items": [
+            {
+                "id": s.id,
+                "start_time": s.start_time,
+                "end_time": s.end_time,
+                "job_title": s.job.title
+            }
+            for s in result["items"]
+        ],
+        "total": result["total"],
+        "page": result["page"],
+        "size": result["size"]
+    }

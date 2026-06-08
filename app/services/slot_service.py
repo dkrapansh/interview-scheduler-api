@@ -76,16 +76,17 @@ def get_open_slots_service(
     logger.info(f"[{get_correlation_id()}] Fetching open slots | job_id={job_id} | date={date}")
 
     query = (
-        db.query(Slot)
-        .outerjoin(Interview)
-        .filter(
-            or_(
-                Interview.id == None,
-                Interview.status == "cancelled"
-            )
+    db.query(Slot)
+    .join(Job, Slot.job_id == Job.id)
+    .outerjoin(Interview, Interview.slot_id == Slot.id)
+    .filter(
+        or_(
+            Interview.id == None,
+            Interview.status == "cancelled"
         )
-        .options(joinedload(Slot.job))
     )
+    .options(joinedload(Slot.job))
+)
 
     if job_id:
         query = query.filter(Slot.job_id == job_id)
