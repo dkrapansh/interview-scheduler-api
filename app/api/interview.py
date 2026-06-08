@@ -46,7 +46,7 @@ def book_interview(
         "job_title": slot.job.title
     }
 
-@router.get("/me", response_model=InterviewResponse)
+@router.get("/me", response_model=list[InterviewResponse])
 def get_my_interviews(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
